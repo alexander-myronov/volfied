@@ -1,29 +1,7 @@
-from Tkinter import *
 import itertools
 
-master = Tk()
 
-canvas_size = 500.0, 500.0
-world_size = 10.0, 10.0
-
-
-def to_screen(x, y):
-    return int((x / world_size[0]) * canvas_size[0]) + 5, int((y / world_size[1]) * canvas_size[1]) + 5
-
-
-w = Canvas(master, width=canvas_size[0] + 50, height=canvas_size[1] + 50)
-w.pack()
-
-
-def draw_contour(contour, join=True, color="black"):
-    points = map(lambda p: to_screen(*p), contour)
-    if join:
-        points = itertools.chain(points, [to_screen(*contour[0])])
-
-    w.create_line(*points, fill=color, dash=(2, 4), width=5)
-
-
-def generate_lines(contour):
+def generate_lines_contour(contour):
     for i, (x1, y1) in enumerate(contour):
         x2, y2 = contour[(i + 1) % len(contour)]
 
@@ -32,15 +10,23 @@ def generate_lines(contour):
         elif y1 == y2:
             yield ((min(x1, x2), y1), (max(x1, x2), y1))
         else:
-            raise KeyError
+            raise AssertionError
+
+
+def generate_lines(points):
+    for i, (x1, y1) in enumerate(points[:-1]):
+        x2, y2 = points[i + 1]
+
+        if x1 == x2:
+            yield (x1, min(y1, y2)), (x1, max(y1, y2))
+        elif y1 == y2:
+            yield ((min(x1, x2), y1), (max(x1, x2), y1))
+        else:
+            raise AssertionError
 
 
 def is_point_on_line(point, line):
     return line[0][0] <= point[0] <= line[1][0] and line[0][1] <= point[1] <= line[1][1]
-
-
-def shift(l, n):
-    return itertools.islice(itertools.cycle(l), n, n + len(l))
 
 
 def is_clockwise(contour):
@@ -48,7 +34,8 @@ def is_clockwise(contour):
     for i, (x1, y1) in enumerate(contour):
         x2, y2 = contour[(i + 1) % len(contour)]
         sum += (x2 - x1) * (y2 + y1)
-
+    if sum == 0:
+        return False
     return sum / abs(sum) == -1
 
 
@@ -74,7 +61,7 @@ def split_contour(main_contour, split_path):
     i_first = -1
     i_last = -1
 
-    for i, line in enumerate(generate_lines(main_contour)):
+    for i, line in enumerate(generate_lines_contour(main_contour)):
         if is_point_on_line(first, line):
             i_first = i
         if is_point_on_line(last, line):
@@ -102,13 +89,31 @@ def split_contour(main_contour, split_path):
     direct_path = list(itertools.chain(split_path, direct_part))
     for i in to_remove:
         direct_path.remove(i)
+    smooth_path(direct_path)
 
     to_remove = list(filter(lambda v: v in reverse_part, split_path))
     reverse_path = list(itertools.chain(reverse_part, split_path[::-1]))
     for i in to_remove:
         reverse_path.remove(i)
+    smooth_path(reverse_path)
 
     return direct_path, reverse_path
+
+
+def smooth_path(path):
+    i = 0
+    c = 0
+    while c < len(path):
+        p0 = path[i % len(path)]
+        p1 = path[(i + 1) % len(path)]
+        p2 = path[(i + 2) % len(path)]
+
+        if p0[0] == p1[0] == p2[0] or p0[1] == p1[1] == p2[1]:
+            path.remove(p1)
+            c = 0
+        else:
+            c += 1
+            i = (i + 1) % len(path)
 
 
 def split_into_rectangles(contour):
@@ -180,8 +185,8 @@ def project(point, line):
 
 def is_intersecting_contour(line, contour):
     line = normalize_line(line)
-    for l in generate_lines(contour):
-        if is_intersecting(l, line):
+    for l in generate_lines_contour(contour):
+        if is_intersecting_strict(l, line):
             return True
     return False
 
@@ -192,7 +197,7 @@ def normalize_line(line):
            (max(line[0][0], line[1][0]), max(line[0][1], line[1][1]))
 
 
-def is_intersecting(line1, line2):
+def is_intersecting_strict(line1, line2):
     # line1 = normalize_line(line1)
     # line2 = normalize_line(line2)
 
@@ -213,6 +218,29 @@ def is_intersecting(line1, line2):
         else:  # vertical
             return line2[0][1] < line1[0][1] < line2[1][1] and \
                    line1[0][0] < line2[0][0] < line1[1][0]
+
+
+def is_intersecting(line1, line2):
+    # line1 = normalize_line(line1)
+    # line2 = normalize_line(line2)
+
+    if length(line1) < length(line2):
+        line1, line2 = line2, line1
+
+    if line1[0][0] == line1[1][0]:  # vertical
+        if line2[0][0] == line2[1][0]:  # vertical
+            return line1[0][0] == line2[0][0] and (
+                line1[0][1] <= line2[0][1] <= line1[1][1] or line1[0][1] <= line2[1][1] <= line1[1][1])
+        else:  # horizontal
+            return line2[0][0] <= line1[0][0] <= line2[1][0] and \
+                   line1[0][1] <= line2[0][1] <= line1[1][1]
+    else:  # horizontal
+        if line2[0][1] == line2[1][1]:  # horizontal
+            return line1[0][1] == line2[0][1] and (
+                line1[0][0] <= line2[0][0] <= line1[1][0] or line1[0][0] <= line2[1][0] <= line1[1][0])
+        else:  # vertical
+            return line2[0][1] <= line1[0][1] <= line2[1][1] and \
+                   line1[0][0] <= line2[0][0] <= line1[1][0]
 
 
 def length(line):
@@ -240,8 +268,11 @@ def split_into_rectangles2(contour):
 
         assert p2[0] == p3[0] or p2[1] == p3[1]
 
-        l12 = length((p1, p2))
-        l34 = length((p3, p4))
+        try:
+            l12 = length((p1, p2))
+            l34 = length((p3, p4))
+        except AssertionError:
+            return
 
         if l12 == l34:
             new_segment = []
@@ -266,11 +297,13 @@ def split_into_rectangles2(contour):
         right_bottom = max(x_list), max(y_list)
         rectangles.append((left_top, right_bottom))
 
+        l = len(contour)
+
         for p in points:
             contour.remove(p)
 
         for j, p in enumerate(new_segment):
-            contour.insert(i + j, p)
+            contour.insert((i + j) % l, p)
 
     return rectangles
 
@@ -279,46 +312,94 @@ def area(rectangles):
     return reduce(lambda s, r: (r[1][0] - r[0][0]) * (r[1][1] - r[0][1]) + s, rectangles, 0)
 
 
-main_contour = [(0, 0), (10, 0), (10, 10), (0, 10)]
-
-split_path = [(0, 3), (1, 3), (1, 4), (5, 4), (5, 10)]
-#split_path = [(2, 0), (2, 2), (5, 2), (5, 0)]
-
-#split_path = [(10, 2), (8, 2), (8, 5), (10, 5)]
-
-split_path.reverse()
+def is_inside_rect(point, rect):
+    return rect[0][0] <= point[0] <= rect[1][0] and rect[0][1] <= point[1] <= rect[1][1]
 
 
-
-direct_path, reverse_path = split_contour(main_contour, split_path)
-
-
-# main_contour = reverse_path
-# split_path = [(3,0), (3,4)]
-# direct_path, reverse_path = split_contour(main_contour, split_path)
+def is_inside_rect_strict(point, rect):
+    return rect[0][0] < point[0] < rect[1][0] and rect[0][1] < point[1] < rect[1][1]
 
 
+def select_active_contour(contour, split_path):
+    direct_path, reverse_path = split_contour(contour, split_path)
 
-rectangles_direct = split_into_rectangles2(direct_path)
-rectangles_reverse = split_into_rectangles2(reverse_path)
+    rectangles_direct = split_into_rectangles2(direct_path)
+    rectangles_reverse = split_into_rectangles2(reverse_path)
 
-sum_direct = area(rectangles_direct)
-sum_reverse = area(rectangles_reverse)
+    sum_direct = area(rectangles_direct)
+    sum_reverse = area(rectangles_reverse)
 
-if sum_direct >= sum_reverse:
-    rectangles = rectangles_direct
-else:
-    rectangles = rectangles_reverse
+    if sum_direct >= sum_reverse:
+        return direct_path, rectangles_direct, sum_direct
+    else:
+        return reverse_path, rectangles_reverse, sum_reverse
 
-for r in rectangles:
-    w.create_rectangle(to_screen(*r[0]), to_screen(*r[1]), fill='green')
 
-draw_contour(main_contour, join=True)
-draw_contour(direct_path, join=True, color='green')
-draw_contour(reverse_path, join=True, color='blue')
-draw_contour(split_path, join=False, color="red")
+if __name__ == '__main__':
 
-# for r in rectangles:
-# w.create_rectangle(to_screen(r[0]), to_screen(r[2]), fill='blue')
+    from Tkinter import *
 
-mainloop()
+    master = Tk()
+
+    canvas_size = 500.0, 500.0
+    world_size = 10.0, 10.0
+
+
+    def to_screen(x, y):
+        return int((x / world_size[0]) * canvas_size[0]) + 5, int((y / world_size[1]) * canvas_size[1]) + 5
+
+
+    w = Canvas(master, width=canvas_size[0] + 50, height=canvas_size[1] + 50)
+    w.pack()
+
+
+    def draw_contour(contour, join=True, color="black"):
+        points = map(lambda p: to_screen(*p), contour)
+        if join:
+            points = itertools.chain(points, [to_screen(*contour[0])])
+
+        w.create_line(*points, fill=color, dash=(2, 4), width=5)
+
+    main_contour = [(0, 0), (10, 0), (10, 10), (8, 10), (8, 8), (2, 8), (2, 10), (0, 10)]
+
+    split_path = [(8, 8), (8, 5), (5, 5), (5, 8)]
+
+    # split_path = [(0, 3), (1, 3), (1, 4), (5, 4), (5, 10)]
+    # split_path = [(2, 0), (2, 2), (5, 2), (5, 0)]
+
+    # split_path = [(10, 2), (8, 2), (8, 5), (10, 5)]
+
+    # split_path.reverse()
+
+    direct_path, reverse_path = split_contour(main_contour, split_path)
+
+
+    # main_contour = reverse_path
+    # split_path = [(3,0), (3,4)]
+    # direct_path, reverse_path = split_contour(main_contour, split_path)
+
+
+
+    rectangles_direct = split_into_rectangles2(direct_path)
+    rectangles_reverse = split_into_rectangles2(reverse_path)
+
+    sum_direct = area(rectangles_direct)
+    sum_reverse = area(rectangles_reverse)
+
+    if sum_direct >= sum_reverse:
+        rectangles = rectangles_direct
+    else:
+        rectangles = rectangles_reverse
+
+    for r in rectangles:
+        w.create_rectangle(to_screen(*r[0]), to_screen(*r[1]), fill='green')
+
+    draw_contour(main_contour, join=True)
+    draw_contour(direct_path, join=True, color='green')
+    draw_contour(reverse_path, join=True, color='blue')
+    draw_contour(split_path, join=False, color="red")
+
+    # for r in rectangles:
+    # w.create_rectangle(to_screen(r[0]), to_screen(r[2]), fill='blue')
+
+    mainloop()

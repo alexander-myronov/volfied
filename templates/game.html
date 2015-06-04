@@ -1,20 +1,27 @@
 <!DOCTYPE html>
 <html>
-    <head lang="en">
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, height=device-height">
-        <title>Volfied</title>
-        </meta>
-        {% load socketio_tags %}
-        {%  socketio %}
-        <script src="static/js/game.js"></script>
-        <link rel="stylesheet" type="text/css" href="static/css/main.css">
-    </head>
-    <body onresize="resize()">
+<head lang="en">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, height=device-height">
+    <title>Volfied</title>
+    </meta>
+    {% load socketio_tags %}
+    {% socketio %}
+    <script src="static/js/game.js"></script>
+    <link rel="stylesheet" type="text/css" href="static/css/main.css">
 
-    <div id="container">
-        <canvas height="500" width="500" id="gameCanvas"></canvas>
-    </div>
 
-    </body>
+</head>
+<body onresize="resize()">
+
+<div id="container">
+    <canvas height="500" width="500" id="gameCanvas"></canvas>
+</div>
+
+<button>
+    <p>aaa</p>
+</button>
+
+
+</body>
 </html>
