@@ -1,4 +1,5 @@
 import itertools
+from math import sqrt
 
 
 def generate_lines_contour(contour):
@@ -333,6 +334,9 @@ def select_active_contour(contour, split_path):
         return direct_path, rectangles_direct, sum_direct
     else:
         return reverse_path, rectangles_reverse, sum_reverse
+
+def distance(p1, p2):
+    return sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
 
 
 if __name__ == '__main__':

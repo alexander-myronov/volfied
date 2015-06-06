@@ -3,7 +3,7 @@ import algorithm
 
 
 class Round(object):
-    def __init__(self, w, h, img_back, img_fore, area_required):
+    def __init__(self, w, h, img_back, img_fore, area_required, enemies):
         self.point = (0, 0)
         self.img_back = img_back,
         self.img_fore = img_fore
@@ -14,6 +14,8 @@ class Round(object):
         self.area_required = area_required
         self.progress = 0
         self.speed = 3
+        self.enemies = list(enemies)
+        self.dead = False
 
 
     def start(self):
@@ -25,8 +27,17 @@ class Round(object):
         self.line = []
         self.progress = 0
 
+        for e in self.enemies:
+            e.spawn((random.randrange(0, self.dimensions[0]), random.randrange(1, self.dimensions[1])))
+
 
     def tick(self, controls):
+
+        for e in self.enemies:
+            e.next_step(self.active_contour)
+            if e.is_hitting_player(self.point):
+                self.dead = True
+                return
 
         dx, dy = 0, 0
         if controls['up']:
@@ -48,10 +59,6 @@ class Round(object):
 
         active = self.belongs_to_active_contour(new_pos)
 
-        inside = self.is_inside_active_contour(new_pos)
-
-
-
         if len(self.line) == 0:
             if not active:
                 return
@@ -71,6 +78,9 @@ class Round(object):
                         except KeyError:
                             break
                         self.progress = 1 - float(area) / (self.dimensions[0] * self.dimensions[1])
+                        killed = [e for e in self.enemies if not self.belongs_to_active_contour(e.point)]
+                        for e in killed:
+                            self.enemies.remove(e)
                         self.line = []
                     break
             else:
@@ -109,8 +119,24 @@ class Round(object):
         status = 0
         if self.progress > self.area_required:
             status = 1
-        response = {'progress': self.progress, 'x': self.point[0], 'y': self.point[1], 'line': self.line,
-                    'active_rectangles': self.rectangles, 'status': status}
+        elif self.dead:
+            status = -1
+        response = {
+            'progress': self.progress,
+            'x': self.point[0],
+            'y': self.point[1],
+            'line': self.line,
+            'active_rectangles': self.rectangles,
+            'status': status,
+            'enemies': [
+                {
+                    'x': e.point[0],
+                    'y': e.point[1],
+                    'radius': e.radius,
+                    'image': e.image
+                } for e in self.enemies
+            ]
+        }
         return response
 
 

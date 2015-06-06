@@ -88,8 +88,8 @@ function redraw() {
             var rect = state.active_rectangles[i];
             ctx.beginPath();
 
-            ctx.rect(   rect[0][0], rect[0][1],
-                        rect[1][0] - rect[0][0], rect[1][1] - rect[0][1]);
+            ctx.rect(rect[0][0], rect[0][1],
+                rect[1][0] - rect[0][0], rect[1][1] - rect[0][1]);
             ctx.fill();
             ctx.stroke();
 
@@ -105,6 +105,15 @@ function redraw() {
             }
             ctx.stroke();
 
+        }
+
+        ctx.fillStyle = 'blue';
+        for (i = 0; i < state.enemies.length; i++) {
+            var e = state.enemies[i];
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, e.radius, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.stroke();
         }
 
         ctx.beginPath();
