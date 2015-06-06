@@ -19,10 +19,30 @@ class Enemy(object):
 
     def next_step(self, contour):
         next_point = self.point[0] + self.velocity[0], self.point[1] + self.velocity[1]
-        self.point = next_point
+
         # my_line = normalize_line((next_point, self.point))
         for line in generate_lines_contour(contour):
-            pass
+            contour1 = [self.point, next_point, line[0]]
+            contour2 = [self.point, next_point, line[1]]
+
+            contour3 = [line[0], line[1], self.point]
+            contour4 = [line[0], line[1], next_point]
+
+            cw1 = is_strictly_clockwise(contour1)
+            cw2 = is_strictly_clockwise(contour2)
+            cw3 = is_strictly_clockwise(contour3)
+            cw4 = is_strictly_clockwise(contour4)
+
+            if cw1 != cw2 and cw3 != cw4:
+                if line[0][0] == line[1][0]:
+                    self.velocity = -self.velocity[0], self.velocity[1]
+                elif line[0][1] == line[1][1]:
+                    self.velocity = self.velocity[0], -self.velocity[1]
+                else:
+                    return
+                break
+        else:
+            self.point = next_point
 
     def is_hitting_player(self, player_pos):
         return distance(player_pos, self.point) <= self.radius

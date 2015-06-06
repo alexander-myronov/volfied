@@ -37,6 +37,7 @@ class Round(object):
             e.next_step(self.active_contour)
             if e.is_hitting_player(self.point):
                 self.dead = True
+                self.line = []
                 return
 
         dx, dy = 0, 0
