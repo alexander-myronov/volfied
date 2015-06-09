@@ -10,8 +10,8 @@ def generate_lines_contour(contour):
             yield (x1, min(y1, y2)), (x1, max(y1, y2))
         elif y1 == y2:
             yield ((min(x1, x2), y1), (max(x1, x2), y1))
-        else:
-            raise AssertionError
+            # else:
+            # raise AssertionError
 
 
 def generate_lines(points):
@@ -109,71 +109,18 @@ def smooth_path(path):
         p1 = path[(i + 1) % len(path)]
         p2 = path[(i + 2) % len(path)]
 
-        if p0[0] == p1[0] == p2[0] or p0[1] == p1[1] == p2[1]:
+        if p0[0] != p1[0] and p0[1] != p1[1]:
+            if abs(p0[0] - p1[0]) < abs(p0[1] - p1[1]):
+                p1 = p0[0], p1[1]
+            else:
+                p1 = p1[0], p0[1]
+
+        elif p0[0] == p1[0] == p2[0] or p0[1] == p1[1] == p2[1]:
             path.remove(p1)
             c = 0
         else:
             c += 1
             i = (i + 1) % len(path)
-
-
-def split_into_rectangles(contour):
-    # processed_points_set = set()
-    contour = list(contour)
-    rectangles = []
-    while len(contour) >= 4:
-
-        try:
-            min_x = min(contour, key=lambda p: p[0])
-        except ValueError:
-            break
-
-        min_index = contour.index(min_x)
-
-        cw_neighbour = contour[(min_index + 1) % len(contour)]
-        ccw_neighbour = contour[(min_index - 1) % len(contour)]
-
-        if cw_neighbour[0] == min_x[0]:
-            neighbour = cw_neighbour
-            neighbour_index = (min_index + 1) % len(contour)
-
-            point3_index = (min_index + 2) % len(contour)
-            point4_index = (min_index - 1) % len(contour)
-
-        elif ccw_neighbour[0] == min_x[0]:
-            neighbour = ccw_neighbour
-            neighbour_index = (min_index - 1) % len(contour)
-
-            point3_index = (min_index - 2) % len(contour)
-            point4_index = (min_index + 1) % len(contour)
-        else:
-            contour.pop(min_index)
-            continue
-
-        point3 = contour[point3_index]
-        point4 = contour[point4_index]
-
-        if point3[0] <= point4[0]:
-            new_point = point3[0], point4[1]
-            if cw_neighbour == neighbour:
-                rect = neighbour, new_point
-            else:
-                rect = min_x, point3
-            contour[min_index] = new_point
-            contour.pop(neighbour_index)
-            contour.pop(contour.index(point3))
-        else:
-            new_point = point4[0], point3[1]
-            if cw_neighbour == neighbour:
-                rect = neighbour, point4
-            else:
-                rect = min_x, new_point
-            contour[neighbour_index] = new_point
-            contour.pop(min_index)
-            contour.pop(contour.index(point4))
-
-        rectangles.append(rect)
-    return rectangles
 
 
 def project(point, line):
@@ -244,11 +191,29 @@ def is_intersecting(line1, line2):
                    line1[0][0] <= line2[0][0] <= line1[1][0]
 
 
+def is_intersecting_angle(line1, line2):
+    contour1 = [line1[0], line1[1], line2[0]]
+    contour2 = [line1[0], line1[1], line2[1]]
+
+    contour3 = [line2[0], line2[1], line1[0]]
+    contour4 = [line2[0], line2[1], line1[1]]
+
+    cw1 = is_strictly_clockwise(contour1)
+    cw2 = is_strictly_clockwise(contour2)
+    cw3 = is_strictly_clockwise(contour3)
+    cw4 = is_strictly_clockwise(contour4)
+
+    return cw1 != cw2 and cw3 != cw4
+
+
 def length(line):
     # assert line[0][0] == line[1][0] or line[0][1] == line[1][1]
     dx, dy = abs(line[0][0] - line[1][0]), abs(line[0][1] - line[1][1])
     assert dx == 0 or dy == 0
     return max(dx, dy)
+
+def length_vector(vec):
+    return
 
 
 def split_into_rectangles2(contour):
@@ -267,12 +232,12 @@ def split_into_rectangles2(contour):
             i = (i + 1) % len(contour)
             continue
 
-        assert p2[0] == p3[0] or p2[1] == p3[1]
-
         try:
+            assert p2[0] == p3[0] or p2[1] == p3[1]
             l12 = length((p1, p2))
             l34 = length((p3, p4))
         except AssertionError:
+            print p1, p2, p3, p4
             return
 
         if l12 == l34:
@@ -310,7 +275,11 @@ def split_into_rectangles2(contour):
 
 
 def area(rectangles):
-    return reduce(lambda s, r: (r[1][0] - r[0][0]) * (r[1][1] - r[0][1]) + s, rectangles, 0)
+    try:
+        return reduce(lambda s, r: (r[1][0] - r[0][0]) * (r[1][1] - r[0][1]) + s, rectangles, 0)
+    except TypeError, e:
+        print(e)
+        print(rectangles)
 
 
 def is_inside_rect(point, rect):
@@ -334,6 +303,7 @@ def select_active_contour(contour, split_path):
         return direct_path, rectangles_direct, sum_direct
     else:
         return reverse_path, rectangles_reverse, sum_reverse
+
 
 def distance(p1, p2):
     return sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)

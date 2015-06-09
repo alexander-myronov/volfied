@@ -1,10 +1,13 @@
 var socket = new io.Socket();
-var controls = {up: false, down: false, left: false, right: false, space: false};
+var controls = [0, 0, 0, 0]
+
 
 var canvas = null;
 var ctx = null;
 var state = null;
 var worldsize = {width: 100, height: 100}
+var radius = 4
+var rectangles = null;
 
 function resize() {
     //if(canvas===null)return;
@@ -53,15 +56,26 @@ function connect() {
         socket.subscribe('echo');
         //socket.send('message');
     });
-    //socket.on('subscribe', function(){
-    //    alert('subscribed');
-    //    //socket.send('message')
-    //});
+
 
     socket.on('message', function (msg) {
 
-        if (msg == null) return
-        state = JSON.parse(msg);
+        if (msg == null) return;
+        var obj = JSON.parse(msg);
+        if (obj.cmd === 'init') {
+            worldsize.width = obj.dimensions[0];
+            worldsize.height = obj.dimensions[1];
+            radius = obj.radius;
+            rectangles = obj.active_rectangles;
+            state = null;
+        }
+        else if (obj.cmd === 'tick') {
+            if (obj.hasOwnProperty('active_rectangles')) {
+                rectangles = obj.active_rectangles
+            }
+            state = obj;
+        }
+
 
     });
 
@@ -82,10 +96,10 @@ function redraw() {
     if (state !== null) {
 
 
-        ctx.fillStyle = 'red';
+        ctx.fillStyle = '#AEB23C';
         var i;
-        for (i = 0; i < state.active_rectangles.length; i++) {
-            var rect = state.active_rectangles[i];
+        for (i = 0; i < rectangles.length; i++) {
+            var rect = rectangles[i];
             ctx.beginPath();
 
             ctx.rect(rect[0][0], rect[0][1],
@@ -107,7 +121,8 @@ function redraw() {
 
         }
 
-        ctx.fillStyle = 'blue';
+        ctx.strokeStyle = "#6AFF77";
+        ctx.fillStyle = '#CC4540';
         for (i = 0; i < state.enemies.length; i++) {
             var e = state.enemies[i];
             ctx.beginPath();
@@ -116,12 +131,42 @@ function redraw() {
             ctx.stroke();
         }
 
+        if (state.on_active == true && state.shield > 0)
+            ctx.strokeStyle = '#F9FF6A';
+        else
+            ctx.strokeStyle = 'transparent';
         ctx.beginPath();
-        ctx.arc(state.x, state.y, 5, 0, 2 * Math.PI)
-        ctx.fillStyle = 'blue';
+        ctx.arc(state.x, state.y, radius, 0, 2 * Math.PI)
+        ctx.fillStyle = '#2874B2';
         ctx.fill();
         ctx.stroke();
 
+        ctx.font = "5px Arial";
+        ctx.fillStyle = "black"
+
+        ctx.textBaseline = "top";
+        ctx.textAlign = "left";
+        ctx.fillText("Shield: " + state.shield, 1, 0);
+
+        ctx.textAlign = "center";
+        ctx.fillText("Lives: " + Math.max(state.lives, 0), worldsize.width/2, 0);
+
+        ctx.textAlign = "right";
+        ctx.fillText("Score: " + state.score, worldsize.width-1,0);
+
+        if (state.hasOwnProperty('status') && state.status != 0) {
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.font = "30px Arial";
+            var text = "";
+            if (state.status === 1) {
+                text = "WIN";
+            }
+            else if (state.status === -1) {
+                text = "LOSE";
+            }
+            ctx.fillText(text, worldsize.width / 2, worldsize.height / 2);
+        }
     }
 
     ctx.restore();
@@ -138,10 +183,10 @@ function worldToScreenY(y) {
 function setup_controller() {
 
     document.onkeydown = function (e) {
-        controls[mapKey(e)] = true;
+        controls[mapKey(e)] = 1;
     };
     document.onkeyup = function (e) {
-        controls[mapKey(e)] = false;
+        controls[mapKey(e)] = 0;
     };
 }
 
@@ -151,15 +196,15 @@ function mapKey(e) {
     e = e || window.event;
 
     if (e.keyCode == '38') {
-        return 'up';
+        return 0;
     }
     else if (e.keyCode == '40') {
-        return 'down'
+        return 1
     }
     else if (e.keyCode == '37') {
-        return 'left'
+        return 2
     }
     else if (e.keyCode == '39') {
-        return 'right'
+        return 3
     }
 }
