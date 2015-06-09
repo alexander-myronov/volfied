@@ -20,5 +20,5 @@ from volfied_server import views
 urlpatterns = [
     url(r'^admin/', include(admin.site.urls)),
     url("", include('django_socketio.urls')),
-    url("game", views.game_view),
+    url("", views.game_view),
 ]
