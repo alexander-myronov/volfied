@@ -1,3 +1,6 @@
+"""user context, stored in session"""
+
+
 class UserContext(object):
     def __init__(self):
         self.score = 0

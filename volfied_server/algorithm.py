@@ -1,8 +1,23 @@
-import itertools
+"""
+core functions for the volfied game
+point - tuple of 2 numbers
+line - tuple of 2 points
+rectangle - tuple of 2 points (left top and right bottom)
+path - list of points (and, conceptually, of lines)
+contour - path, which is closed
+"""
+from itertools import chain
 from math import sqrt
 
 
 def generate_lines_contour(contour):
+    """
+    generate subsequent lines from a list of points and the line from last to first,
+    thus closing the contour
+    point sequence must be orthogonal
+    :param points: [(0,0), (10,0), (10,10)]
+    :return: [((0,0),(10,0)), ((10,0),(10,10)), ((10,10),(0,10))]
+    """
     for i, (x1, y1) in enumerate(contour):
         x2, y2 = contour[(i + 1) % len(contour)]
 
@@ -15,6 +30,12 @@ def generate_lines_contour(contour):
 
 
 def generate_lines(points):
+    """
+    generate subsequent lines from a list of points
+    point sequence must be orthogonal
+    :param points: [(0,0), (10,0), (10,10)]
+    :return: [((0,0),(10,0)), ((10,0),(10,10))]
+    """
     for i, (x1, y1) in enumerate(points[:-1]):
         x2, y2 = points[i + 1]
 
@@ -27,20 +48,31 @@ def generate_lines(points):
 
 
 def is_point_on_line(point, line):
+    """
+    tests if point is on line
+    line must be orthogonal
+    """
     return line[0][0] <= point[0] <= line[1][0] and line[0][1] <= point[1] <= line[1][1]
 
 
 def is_clockwise(contour):
-    sum = 0
+    """
+    check if a contour is "mostly" clockwise
+    it may be concave
+    """
+    s = 0
     for i, (x1, y1) in enumerate(contour):
         x2, y2 = contour[(i + 1) % len(contour)]
-        sum += (x2 - x1) * (y2 + y1)
-    if sum == 0:
+        s += (x2 - x1) * (y2 + y1)
+    if s == 0:
         return False
-    return sum / abs(sum) == -1
+    return s / abs(s) == -1
 
 
 def is_strictly_clockwise(contour):
+    """
+    checks if contour is strictly clockwise: clockwise and convex
+    """
     for i, (x1, y1) in enumerate(contour[:-2]):
         x2, y2 = contour[(i + 1) % len(contour)]
         x3, y3 = contour[(i + 2) % len(contour)]
@@ -56,6 +88,9 @@ def is_strictly_clockwise(contour):
 
 
 def split_contour(main_contour, split_path):
+    """
+    splits a contour by a split path into direct and reverse contours
+    """
     first = split_path[0]
     last = split_path[-1]
 
@@ -87,13 +122,13 @@ def split_contour(main_contour, split_path):
 
     to_remove = list(filter(lambda v: v in direct_part, split_path))
 
-    direct_path = list(itertools.chain(split_path, direct_part))
+    direct_path = list(chain(split_path, direct_part))
     for i in to_remove:
         direct_path.remove(i)
     smooth_path(direct_path)
 
     to_remove = list(filter(lambda v: v in reverse_part, split_path))
-    reverse_path = list(itertools.chain(reverse_part, split_path[::-1]))
+    reverse_path = list(chain(reverse_part, split_path[::-1]))
     for i in to_remove:
         reverse_path.remove(i)
     smooth_path(reverse_path)
@@ -102,6 +137,9 @@ def split_contour(main_contour, split_path):
 
 
 def smooth_path(path):
+    """
+    removes any non-orthogonal points on a path and joins lines if possible
+    """
     i = 0
     c = 0
     while c < len(path):
@@ -124,6 +162,10 @@ def smooth_path(path):
 
 
 def project(point, line):
+    """
+    projects a point onto line
+    line must be orthogonal
+    """
     assert line[0][0] == line[1][0] or line[0][1] == line[1][1]
     if line[0][0] == line[1][0]:
         return line[0][0], point[1]
@@ -132,6 +174,9 @@ def project(point, line):
 
 
 def is_intersecting_contour(line, contour):
+    """
+    check if a line is intersecting a contour
+    """
     line = normalize_line(line)
     for l in generate_lines_contour(contour):
         if is_intersecting_strict(l, line):
@@ -140,12 +185,20 @@ def is_intersecting_contour(line, contour):
 
 
 def normalize_line(line):
+    """
+    lesser x before greater x, same with y
+    line must be orthogonal
+    """
     assert line[0][0] == line[1][0] or line[0][1] == line[1][1]
     return (min(line[0][0], line[1][0]), min(line[0][1], line[1][1])), \
            (max(line[0][0], line[1][0]), max(line[0][1], line[1][1]))
 
 
 def is_intersecting_strict(line1, line2):
+    """
+    check if 2 orthogonal lines are strictly intersecting
+    if an end of line 1 lies on line 2 - this will return False (not strict intersection)
+    """
     # line1 = normalize_line(line1)
     # line2 = normalize_line(line2)
 
@@ -169,6 +222,10 @@ def is_intersecting_strict(line1, line2):
 
 
 def is_intersecting(line1, line2):
+    """
+    check if 2 orthogonal lines are strictly intersecting
+    if an end of line 1 lies on line 2 - this will return True
+    """
     # line1 = normalize_line(line1)
     # line2 = normalize_line(line2)
 
@@ -178,20 +235,27 @@ def is_intersecting(line1, line2):
     if line1[0][0] == line1[1][0]:  # vertical
         if line2[0][0] == line2[1][0]:  # vertical
             return line1[0][0] == line2[0][0] and (
-                line1[0][1] <= line2[0][1] <= line1[1][1] or line1[0][1] <= line2[1][1] <= line1[1][1])
+                line1[0][1] <= line2[0][1] <= line1[1][1] or \
+                line1[0][1] <= line2[1][1] <= line1[1][1])
         else:  # horizontal
             return line2[0][0] <= line1[0][0] <= line2[1][0] and \
                    line1[0][1] <= line2[0][1] <= line1[1][1]
     else:  # horizontal
         if line2[0][1] == line2[1][1]:  # horizontal
             return line1[0][1] == line2[0][1] and (
-                line1[0][0] <= line2[0][0] <= line1[1][0] or line1[0][0] <= line2[1][0] <= line1[1][0])
+                line1[0][0] <= line2[0][0] <= line1[1][0] or \
+                line1[0][0] <= line2[1][0] <= line1[1][0])
         else:  # vertical
             return line2[0][1] <= line1[0][1] <= line2[1][1] and \
                    line1[0][0] <= line2[0][0] <= line1[1][0]
 
 
 def is_intersecting_angle(line1, line2):
+    """
+    check if 2 lines are intersecting
+    assume that they are not parallel
+    if they are parallel and 1 line belong to another - will return False
+    """
     contour1 = [line1[0], line1[1], line2[0]]
     contour2 = [line1[0], line1[1], line2[1]]
 
@@ -207,16 +271,20 @@ def is_intersecting_angle(line1, line2):
 
 
 def length(line):
+    """
+    length of an orthogonal line
+    """
     # assert line[0][0] == line[1][0] or line[0][1] == line[1][1]
     dx, dy = abs(line[0][0] - line[1][0]), abs(line[0][1] - line[1][1])
     assert dx == 0 or dy == 0
     return max(dx, dy)
 
-def length_vector(vec):
-    return
 
 
-def split_into_rectangles2(contour):
+def split_into_rectangles(contour):
+    """
+    split a contour into rectangles
+    """
     rectangles = []
     contour = list(contour)
     i = 0
@@ -237,7 +305,7 @@ def split_into_rectangles2(contour):
             l12 = length((p1, p2))
             l34 = length((p3, p4))
         except AssertionError:
-            print p1, p2, p3, p4
+            print (p1, p2, p3, p4)
             return
 
         if l12 == l34:
@@ -256,7 +324,7 @@ def split_into_rectangles2(contour):
             i = (i + 1) % len(contour)
             continue
 
-        rect_points = list(itertools.chain(split_line, points[1:3]))
+        rect_points = list(chain(split_line, points[1:3]))
         x_list = [p[0] for p in rect_points]
         y_list = [p[1] for p in rect_points]
         left_top = min(x_list), min(y_list)
@@ -275,26 +343,38 @@ def split_into_rectangles2(contour):
 
 
 def area(rectangles):
+    """
+    calculate the area of a list of rectangles
+    """
     try:
         return reduce(lambda s, r: (r[1][0] - r[0][0]) * (r[1][1] - r[0][1]) + s, rectangles, 0)
     except TypeError, e:
-        print(e)
-        print(rectangles)
+        return 0
 
 
 def is_inside_rect(point, rect):
+    """
+    check if point is inside rectangle or on its boundary
+    """
     return rect[0][0] <= point[0] <= rect[1][0] and rect[0][1] <= point[1] <= rect[1][1]
 
 
 def is_inside_rect_strict(point, rect):
+    """
+    check if point is inside rectangle (but not on its boundary)
+    """
     return rect[0][0] < point[0] < rect[1][0] and rect[0][1] < point[1] < rect[1][1]
 
 
 def select_active_contour(contour, split_path):
+    """
+    split the contour by path and select a bigger one as new contour
+    core of the Volfied game
+    """
     direct_path, reverse_path = split_contour(contour, split_path)
 
-    rectangles_direct = split_into_rectangles2(direct_path)
-    rectangles_reverse = split_into_rectangles2(reverse_path)
+    rectangles_direct = split_into_rectangles(direct_path)
+    rectangles_reverse = split_into_rectangles(reverse_path)
 
     sum_direct = area(rectangles_direct)
     sum_reverse = area(rectangles_reverse)
@@ -306,74 +386,7 @@ def select_active_contour(contour, split_path):
 
 
 def distance(p1, p2):
+    """
+    Euclidean distance
+    """
     return sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
-
-
-if __name__ == '__main__':
-
-    from Tkinter import *
-
-    master = Tk()
-
-    canvas_size = 500.0, 500.0
-    world_size = 10.0, 10.0
-
-
-    def to_screen(x, y):
-        return int((x / world_size[0]) * canvas_size[0]) + 5, int((y / world_size[1]) * canvas_size[1]) + 5
-
-
-    w = Canvas(master, width=canvas_size[0] + 50, height=canvas_size[1] + 50)
-    w.pack()
-
-
-    def draw_contour(contour, join=True, color="black"):
-        points = map(lambda p: to_screen(*p), contour)
-        if join:
-            points = itertools.chain(points, [to_screen(*contour[0])])
-
-        w.create_line(*points, fill=color, dash=(2, 4), width=5)
-
-    main_contour = [(0, 0), (10, 0), (10, 10), (8, 10), (8, 8), (2, 8), (2, 10), (0, 10)]
-
-    split_path = [(8, 8), (8, 5), (5, 5), (5, 8)]
-
-    # split_path = [(0, 3), (1, 3), (1, 4), (5, 4), (5, 10)]
-    # split_path = [(2, 0), (2, 2), (5, 2), (5, 0)]
-
-    # split_path = [(10, 2), (8, 2), (8, 5), (10, 5)]
-
-    # split_path.reverse()
-
-    direct_path, reverse_path = split_contour(main_contour, split_path)
-
-
-    # main_contour = reverse_path
-    # split_path = [(3,0), (3,4)]
-    # direct_path, reverse_path = split_contour(main_contour, split_path)
-
-
-
-    rectangles_direct = split_into_rectangles2(direct_path)
-    rectangles_reverse = split_into_rectangles2(reverse_path)
-
-    sum_direct = area(rectangles_direct)
-    sum_reverse = area(rectangles_reverse)
-
-    if sum_direct >= sum_reverse:
-        rectangles = rectangles_direct
-    else:
-        rectangles = rectangles_reverse
-
-    for r in rectangles:
-        w.create_rectangle(to_screen(*r[0]), to_screen(*r[1]), fill='green')
-
-    draw_contour(main_contour, join=True)
-    draw_contour(direct_path, join=True, color='green')
-    draw_contour(reverse_path, join=True, color='blue')
-    draw_contour(split_path, join=False, color="red")
-
-    # for r in rectangles:
-    # w.create_rectangle(to_screen(r[0]), to_screen(r[2]), fill='blue')
-
-    mainloop()

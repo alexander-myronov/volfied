@@ -1,13 +1,16 @@
+"""
+server request-response logic
+server gets controls from client
+and sends back new game state, based on controls
+"""
 import json
 from volfied_server.round import Round
-
-__author__ = 'Alex'
-
 from django_socketio import events
 
 
 @events.on_message(channel="echo")
 def message(request, socket, context, msg):
+    """function called when message is received"""
     obj = json.loads(msg)
 
     round = request.session['round']
@@ -58,6 +61,7 @@ def connect(request, socket, context, *args):
 
 @events.on_subscribe(channel="echo")
 def subscribe(request, socket, context, *args):
+    """function called when a client subscribed to channel 'echo'"""
     r = request.session['round']
     r.start()
     response = r.get_init_message()
