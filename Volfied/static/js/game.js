@@ -110,7 +110,7 @@ function redraw() {
         }
 
         ctx.strokeStyle = 'yellow';
-        if (state.line.length > 1) {
+        if (state.hasOwnProperty('line') && state.line.length > 1) {
             ctx.beginPath();
             ctx.moveTo(state.line[0][0], state.line[0][1]);
 
@@ -123,12 +123,14 @@ function redraw() {
 
         ctx.strokeStyle = "#6AFF77";
         ctx.fillStyle = '#CC4540';
-        for (i = 0; i < state.enemies.length; i++) {
-            var e = state.enemies[i];
-            ctx.beginPath();
-            ctx.arc(e.x, e.y, e.radius, 0, 2 * Math.PI);
-            ctx.fill();
-            ctx.stroke();
+        if (state.hasOwnProperty('enemies')) {
+            for (i = 0; i < state.enemies.length; i++) {
+                var e = state.enemies[i];
+                ctx.beginPath();
+                ctx.arc(e.x, e.y, e.radius, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.stroke();
+            }
         }
 
         if (state.on_active == true && state.shield > 0)
@@ -149,21 +151,21 @@ function redraw() {
         ctx.fillText("Shield: " + state.shield, 1, 0);
 
         ctx.textAlign = "center";
-        ctx.fillText("Lives: " + Math.max(state.lives, 0), worldsize.width/2, 0);
+        ctx.fillText("Lives: " + Math.max(state.lives, 0), worldsize.width / 2, 0);
 
         ctx.textAlign = "right";
-        ctx.fillText("Score: " + state.score, worldsize.width-1,0);
+        ctx.fillText("Score: " + state.score, worldsize.width - 1, 0);
 
         if (state.hasOwnProperty('status') && state.status != 0) {
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.font = "30px Arial";
+            ctx.font = "16px Arial";
             var text = "";
             if (state.status === 1) {
                 text = "WIN";
             }
             else if (state.status === -1) {
-                text = "LOSE";
+                text = "SCORE:" + state.score;
             }
             ctx.fillText(text, worldsize.width / 2, worldsize.height / 2);
         }

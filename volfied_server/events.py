@@ -29,6 +29,7 @@ def message(request, socket, context, msg):
     response['score'] = ctx.score
 
     if round.is_completed():
+        ctx.score += 1000
         ctx.round += 1  # nextround
         try:
             r = Round.get_round(ctx.round)

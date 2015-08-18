@@ -108,6 +108,7 @@ class Round(object):
                 if is_intersecting(line, last_step):
                     new_pos = project(new_pos, line)
                     if self.append_to_line(new_pos):
+                        old_progress = self.progress
                         try:
 
                             self.active_contour, self.rectangles, area = \
@@ -115,6 +116,7 @@ class Round(object):
                         except KeyError:
                             break
                         self.progress = 1 - float(area) / (self.dimensions[0] * self.dimensions[1])
+                        add_score += int((self.progress - old_progress) * 1000)
                         killed = [enemy for enemy in self.enemies if
                                   not self.belongs_to_active_contour(enemy.point)]
                         for enemy in killed:
@@ -241,12 +243,17 @@ class Round(object):
         """
         rounds = [
             Round(100, 100, '', '', 0.8, [
+                Enemy(4, 2, ''),
+                Enemy(3, 2, ''),
+                Enemy(2, 2, ''),
+            ]),
+            Round(100, 100, '', '', 0.8, [
                 Enemy(5, 1, ''),
                 Enemy(4, 2, ''),
                 Enemy(3, 2, ''),
                 Enemy(2, 2, ''),
                 SpeedingEnemy(1, 3, ''),
-                ShapeShiftingEnemy(20, 1, '')
+                ShapeShiftingEnemy(7, 1, '')
             ])
         ]
         return rounds[index]
